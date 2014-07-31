@@ -34,11 +34,31 @@ check_preconditions <- function(mip, mip_next, mip_next2) {
     }
 }
 
-check_overlap <- function(mip, mip_next, mip_next2) {
-    if (check_preconditions(mip, mip_next, mip_next2))
+check_exom_covered <- function(exom) {
+    mips_total <- nrow(exom)
+    if (mips_total > 1)
     {
+        mip_first <- exom[1,]
+        mip_last  <- exom[mips_total,]
         
+        if (mip_first$mip_target_start_position > mip_first$feature_start_position |
+            mip_last$mip_target_stop_position < mip_first$feature_end_position)
+        {
+            stop("Exom not covered - cannot recover")
+        }
+        
+        for(mip_no in 1:(mips_total - 1) {
+            mip <- exom[mip_no,]
+            mip_next <- exom[mip_no + 1,]
+            
+            if (mip$mip_target_stop_position < mip_next$mip_target_stop_position)
+            {
+                return(FALSE)
+            }
+        }
     }
+    
+    return(TRUE)
 }
 
 too_intronic_param <- 0
@@ -63,8 +83,26 @@ condition_too_intronic <- (mipsNoHighCopy$feature_start_position + too_intronic_
 excluded_too_intronic <- mipsNoHighCopy[condition_too_intronic,]
 mipsTooIntronic <- mipsNoHighCopy[!condition_too_intronic,] 
 
-a <- ddply(mipsTooIntronic,c("feature_start_position", "feature_stop_position"),
-    function(x) {
-        print(nrow(x))
+a <- ddply(mips,c("feature_start_position", "feature_stop_position"),
+    function(exom) {
+        mips_no <-  nrow(exom)
+        if (mips_no >= 3)
+        {
+            for(row_no in 1:(mips_no - 2)
+            {
+                mip <- exom[row_no,]
+                mip_next <- exom[row_no + 1,]
+                mip_next_next <- exom[row_no + 2,]
+                if (check_probe_strands(mip, mip_next, mip_next_next) == TRUE)
+                {
+                    if (mip$mip_target_start_position >= mip_next$mip_target_stop_position &
+                        mip$mip_target_stop_position  >= mip_next_next$mip_target_stop_position)
+                    {
+                        if ()
+                    }
+                }
+            }
+        }
+        return(exom)
     })
 
