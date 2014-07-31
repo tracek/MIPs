@@ -1,38 +1,3 @@
-library(plyr)
-
-
-check_same_exom <- function(mip1, mip2) {
-    start_equal <-  mip1$feature_start_position == mip2$feature_start_position
-    end_equal <- mip1$feature_stop_position == mip2$feature_stop_position
-    return (start_equal & end_equal)
-}
-
-check_probe_strands <- function(mip, mip_next, mip_next2) {
-    if (mip$probe_strand == '-')
-    {
-        return (mip_next == '+' & mip_next2 == '+')
-    }
-    else if (mip$probe_strand == '+')
-    {
-        return (mip_next == '-' & mip_next2 == '-')
-    }
-    else
-    {
-        stop("Unknown probe strand")
-    }
-}
-
-check_preconditions <- function(mip, mip_next, mip_next2) {
-    same_exom <- check_same_exom(mip, mip_next) & check_same_exom(mip, mip_next2)
-    if (same_exom == TRUE)
-    {
-        return(check_probe_strands(mip, mip_next, mip_next2))
-    }
-    else
-    {
-        return(FALSE)
-    }
-}
 
 check_exom_covered <- function(exom) {
     mips_total <- nrow(exom)
@@ -42,7 +7,7 @@ check_exom_covered <- function(exom) {
         mip_last  <- exom[mips_total,]
         
         if (mip_first$mip_target_start_position > mip_first$feature_start_position |
-            mip_last$mip_target_stop_position < mip_first$feature_end_position)
+                mip_last$mip_target_stop_position < mip_first$feature_end_position)
         {
             stop("Exom not covered - cannot recover")
         }
@@ -84,25 +49,11 @@ excluded_too_intronic <- mipsNoHighCopy[condition_too_intronic,]
 mipsTooIntronic <- mipsNoHighCopy[!condition_too_intronic,] 
 
 a <- ddply(mips,c("feature_start_position", "feature_stop_position"),
-    function(exom) {
-        mips_no <-  nrow(exom)
-        if (mips_no >= 3)
-        {
-            for(row_no in 1:(mips_no - 2))
-            {
-                mip <- exom[row_no,]
-                mip_next <- exom[row_no + 1,]
-                mip_next_next <- exom[row_no + 2,]
-                if (check_probe_strands(mip, mip_next, mip_next_next) == TRUE)
-                {
-                    if (mip$mip_target_start_position >= mip_next$mip_target_stop_position &
-                        mip$mip_target_stop_position  >= mip_next_next$mip_target_stop_position)
-                    {
-                        if ()
-                    }
-                }
-            }
-        }
-        return(exom)
-    })
-
+           function(exom) {
+               print(nrow(exom))
+               if (check_exom_covered(exom) == FALSE)
+               {
+                   stop("Exom not covered - cannot recover")
+               }
+               return(exom)
+           })
