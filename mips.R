@@ -221,6 +221,9 @@ mips_excessive <- mips_exonic[condition_mips_excessive,]
 save_mips(mips_excessive, "04_mips_excessive.txt")
 mips_excessive_removed <- mips_exonic[!condition_mips_excessive,]
 
+# Save final result
+save_mips(mips_excessive_removed, "mips_final.txt")
+
 # Report exons that are not covered
 ddply(mips_excessive_removed,
       c("feature_start_position", "feature_stop_position"),
