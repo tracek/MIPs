@@ -195,18 +195,20 @@ save_mips(mips_duplicated, "01_mips_duplicated.txt")
 mips_no_dup <- mips[!condition_duplicated,]
 
 # Step 2: Exclude high copy count
-condition_too_high_copy_count <-  (mips_no_dup$ext_copy_count > 100 | mips_no_dup$lig_copy_count > 100) |
-    (mips_no_dup$ext_copy_count > 5 & mips_no_dup$lig_copy_count > 5)
-mips_too_high_copy_count <- mips_no_dup[condition_too_high_copy_count,]
+condition_too_high_copy_count <-  (mips$ext_copy_count > 100 | mips$lig_copy_count > 100) |
+    (mips$ext_copy_count > 5 & mips$lig_copy_count > 5)
+mips_too_high_copy_count <- mips[condition_too_high_copy_count,]
 save_mips(mips_too_high_copy_count, "02_mips_too_high_copy_count.txt")
-mips_no_high_copy <- mips_no_dup[!condition_too_high_copy_count,]
+mips_no_high_copy <- mips[!condition_too_high_copy_count,]
 
 # Step 3: Exclude too far intronic
-condition_too_intronic <- (mips_no_high_copy$feature_start_position + too_intronic_param) > mips_no_high_copy$mip_target_stop_position |
-                          (mips_no_high_copy$feature_stop_position - too_intronic_param) < mips_no_high_copy$mip_target_start_position
+condition_too_intronic <- (mips_no_high_copy$feature_start_position) > mips_no_high_copy$mip_target_stop_position |
+                          (mips_no_high_copy$feature_stop_position) < mips_no_high_copy$mip_target_start_position
 mips_too_intronic <- mips_no_high_copy[condition_too_intronic,]
 save_mips(mips_too_intronic, "03_mips_too_intronic.txt")
 mips_exonic <- mips_no_high_copy[!condition_too_intronic,] 
+
+ddply(mips_exonic)
 
 # Remove excessive MIPs
 ddply(mips_exonic,                                           # Apply a function to mips_exonic
@@ -231,3 +233,4 @@ ddply(mips_excessive_removed,
       .inform = TRUE)
 
 print("DONE!")
+
