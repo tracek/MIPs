@@ -4,6 +4,7 @@ if (!require(plyr)){
 
 input_file_name <- "test.txt"
 too_intronic_param <- 0
+overlap <- 200
 
 # Functions' definition
 
@@ -187,6 +188,35 @@ save_mips <- function(mips, name)
     write.table(mips, file=name, sep="\t", row.names=FALSE)
 }
 
+merge_exons <- function(exons)
+{   
+    mips_total <- nrow(exons)
+    for (row_no in 1:(mips_total - 1))
+    {
+        mip <- exons[row_no,]
+        mip_2 <- exons[row_no + 1,]
+        
+        
+        if (mip$feature_start_position != mip_2$feature_start_position) # different exon 
+        {
+            if ((mip$feature_stop_position + overlap) > mip_2$feature_start_position)
+            {
+                # We have sufficient overlap - merge!
+                new_exon_start <- mip$feature_start_position
+                new_exon_stop <- mip_2$feature_stop_position
+                
+                exons[exons$feature_start_position == new_exon_start, "feature_stop_position"] <- new_exon_stop
+                exons[exons$feature_stop_position == new_exon_stop, "feature_start_position"] <- new_exon_start
+                # print(exons$X.mip_pick_count)
+                cat("Merge ", mip$feature_stop_position, "id:", mip$X.mip_pick_count,
+                    " and", mip_2$feature_start_position, "id:", mip_2$X.mip_pick_count, "\n")
+            }
+        }
+    }
+    
+    return(exons)
+}
+
 #############################################################################
 
 
@@ -195,6 +225,9 @@ excessive_mips <- numeric()
 
 # Read the data
 mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALSE)
+
+# Sort by feature_start_position
+mips <- mips[order(mips$feature_start_position),]
 
 # Step 1: Remove duplicates 
 condition_duplicated <- duplicated(mips[,c('ext_probe_start','ext_probe_stop','lig_probe_start', 'lig_probe_stop')])
@@ -216,7 +249,11 @@ mips_too_intronic <- mips_no_high_copy[condition_too_intronic,]
 save_mips(mips_too_intronic, "03_mips_too_intronic.txt")
 mips_exonic <- mips_no_high_copy[!condition_too_intronic,] 
 
-ddply(mips_exonic)
+# Merge exons that are close to each other within a chromosome
+mips_exonic <- ddply(mips_exonic,
+      "chr",
+      merge_exons,
+      .inform = TRUE)
 
 # Remove excessive MIPs
 ddply(mips_exonic,                                           # Apply a function to mips_exonic
