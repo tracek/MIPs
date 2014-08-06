@@ -2,31 +2,23 @@ if (!require(plyr)){
     install.packages(plyr) 
 } 
 
-input_file_name <- "test.txt"
+input_file_name <- "test_corrected.txt"
 too_intronic_param <- 0
 overlap <- 200
 
 # Functions' definition
 
-check_probe_strands <- function(mip, mip_next, mip_next2)
+check_probe_strands <- function(mip, mip_2, mip_3)
 {
     if (mip$probe_strand == '-')
     {
-        return (mip_next$probe_strand == '+' & mip_next2$probe_strand == '+')
+        return (mip_3$probe_strand == '+')
     }
     else if (mip$probe_strand == '+')
     {
-        return (mip_next$probe_strand == '-' & mip_next2$probe_strand == '-')
+        return (mip_3$probe_strand == '-')
     }
-    else if (mip$probe_strand == '+')
-    {
-        return (mip_next$probe_strand == '+' & mip_next2$probe_strand == '-')
-    }
-    else if (mip$probe_strand == '-')
-    {
-        return (mip_next$probe_strand == '-' & mip_next2$probe_strand == '+')
-    }
-    else
+        else
     {
         stop("Unknown probe strand")
     }
@@ -46,7 +38,7 @@ find_missing_exon_cover <- function(exon)
     mip_last  <- exon[mips_total,]
     chr <- mip_first$chr
     
-    # Chech start
+    # Check start
     if (exon_start < mip_first$mip_target_start_position)
     {
         start <- c(start, exon_start)
@@ -67,14 +59,14 @@ find_missing_exon_cover <- function(exon)
         for(mip_no in 1:(mips_total - 1))
         {
             mip <- exon[mip_no,]
-            mip_next <- exon[mip_no + 1,]
+            mip_2 <- exon[mip_no + 1,]
             
-            if (mip$mip_target_stop_position < mip_next$mip_target_start_position)
+            if (mip$mip_target_stop_position < mip_2$mip_target_start_position)
             {
                 start <- c(start, mip$mip_target_stop_position)
-                end <- c(end, mip_next$mip_target_start_position)
-                # result <- c(result, mip$mip_target_stop_position, mip_next$mip_target_start_position)
-                # write_missing_mips(chr, mip$mip_target_stop_position, mip_next$mip_target_start_position)
+                end <- c(end, mip_2$mip_target_start_position)
+                # result <- c(result, mip$mip_target_stop_position, mip_2$mip_target_start_position)
+                # write_missing_mips(chr, mip$mip_target_stop_position, mip_2$mip_target_start_position)
             }
         }
     }
@@ -104,9 +96,9 @@ check_exon_covered <- function(exon)
         
         for(mip_no in 1:(mips_total - 1)) {
             mip <- exon[mip_no,]
-            mip_next <- exon[mip_no + 1,]
+            mip_2 <- exon[mip_no + 1,]
             
-            if (mip$mip_target_stop_position < mip_next$mip_target_start_position)
+            if (mip$mip_target_stop_position < mip_2$mip_target_start_position)
             {
                 return(FALSE)
             }
@@ -236,11 +228,11 @@ save_mips(mips_duplicated, "01_mips_duplicated.txt")
 mips_no_dup <- mips[!condition_duplicated,]
 
 # Step 2: Exclude high copy count
-condition_too_high_copy_count <-  (mips$ext_copy_count > 100 | mips$lig_copy_count > 100) |
-    (mips$ext_copy_count > 5 & mips$lig_copy_count > 5)
-mips_too_high_copy_count <- mips[condition_too_high_copy_count,]
+condition_too_high_copy_count <-  (mips_no_dup$ext_copy_count > 100 | mips_no_dup$lig_copy_count > 100) |
+  (mips_no_dup$ext_copy_count > 5 & mips_no_dup$lig_copy_count > 5)
+mips_too_high_copy_count <- mips_no_dup[condition_too_high_copy_count,]
 save_mips(mips_too_high_copy_count, "02_mips_too_high_copy_count.txt")
-mips_no_high_copy <- mips[!condition_too_high_copy_count,]
+mips_no_high_copy <- mips_no_dup[!condition_too_high_copy_count,]
 
 # Step 3: Exclude too far intronic
 condition_too_intronic <- (mips_no_high_copy$feature_start_position) > mips_no_high_copy$mip_target_stop_position |
@@ -249,11 +241,14 @@ mips_too_intronic <- mips_no_high_copy[condition_too_intronic,]
 save_mips(mips_too_intronic, "03_mips_too_intronic.txt")
 mips_exonic <- mips_no_high_copy[!condition_too_intronic,] 
 
+<<<<<<< HEAD
 # Merge exons that are close to each other within a chromosome
 mips_exonic <- ddply(mips_exonic,
       "chr",
       merge_exons,
       .inform = TRUE)
+=======
+>>>>>>> c0382d4cc7d9ca20fe22a6a1717d84cb7813f2b7
 
 # Remove excessive MIPs
 ddply(mips_exonic,                                           # Apply a function to mips_exonic
