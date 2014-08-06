@@ -22,8 +22,10 @@ check_probe_strands <- function(mip, mip_next, mip_next2)
         return (mip_next$probe_strand == '+' & mip_next2$probe_strand == '-')
     }
     else if (mip$probe_strand == '-')
+    {
         return (mip_next$probe_strand == '-' & mip_next2$probe_strand == '+')
-    }    
+    }
+    else
     {
         stop("Unknown probe strand")
     }
