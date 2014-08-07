@@ -7,5 +7,9 @@
 # R data files from past sessions
 .Rdata
 
+<<<<<<< HEAD
 *.txt
 .Rproj.user
+=======
+.txt
+>>>>>>> 556bb82b91445f9139064f6da1c61d02d6989725
