@@ -218,14 +218,15 @@ excessive_mips <- numeric()
 # Read the data
 mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALSE)
 
-# Sort by feature_start_position
-mips <- mips[order(mips$chr, mips$feature_start_position),]
+# Sort the data
+mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
+save_mips(mips_sorted, "01_mips_sorted.txt")
 
 # Step 1: Remove duplicates 
-condition_duplicated <- duplicated(mips[,c('ext_probe_start','ext_probe_stop','lig_probe_start', 'lig_probe_stop')])
-mips_duplicated <- mips[condition_duplicated,]
+condition_duplicated <- duplicated(mips_sorted[,c('ext_probe_start','ext_probe_stop','lig_probe_start', 'lig_probe_stop')])
+mips_duplicated <- mips_sorted[condition_duplicated,]
 save_mips(mips_duplicated, "01_mips_duplicated.txt")
-mips_no_dup <- mips[!condition_duplicated,]
+mips_no_dup <- mips_sorted[!condition_duplicated,]
 
 # Step 2: Exclude high copy count
 condition_too_high_copy_count <-  (mips_no_dup$ext_copy_count > 100 | mips_no_dup$lig_copy_count > 100) |
