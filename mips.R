@@ -2,7 +2,7 @@ if (!require(plyr)){
     install.packages(plyr) 
 } 
 
-input_file_name <- "test.txt"
+input_file_name <- file.choose()
 too_intronic_param <- 0
 overlap <- 200
 
