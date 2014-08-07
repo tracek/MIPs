@@ -231,7 +231,7 @@ mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALS
 
 # Sort the data
 mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
-save_mips(mips_sorted, "01_mips_sorted.txt")
+save_mips(mips_sorted, "00_mips_sorted.txt")
 
 # Step 1: Remove duplicates 
 condition_duplicated <- duplicated(mips_sorted[,c('ext_probe_start','ext_probe_stop','lig_probe_start', 'lig_probe_stop')])
