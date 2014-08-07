@@ -69,7 +69,8 @@ find_missing_exon_cover <- function(exon)
     {
         chr_column <- rep(paste("chr", chr, sep=""), missing_regions_total) # Make column with chr
         df <- data.frame(chr_column, start, end)
-        write.table(df, file="exons_not_covered.txt", append=TRUE, quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")
+        filename <- paste(input_file_name, "exons_not_covered.txt", sep="_")
+        write.table(df, file=filename, append=TRUE, quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")
     }
 }
 
@@ -229,28 +230,35 @@ excessive_mips <- numeric()
 # Read the data
 mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALSE)
 
+# Remove extension from inout file name
+input_file_name <- sub("^([^.]*).*", "\\1", input_file_name) 
+
 # Sort the data
 mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
-save_mips(mips_sorted, "00_mips_sorted.txt")
+filename <- paste(input_file_name, "mips_sorted.txt", sep="_")
+save_mips(mips_sorted, filename)
 
 # Step 1: Remove duplicates 
 condition_duplicated <- duplicated(mips_sorted[,c('ext_probe_start','ext_probe_stop','lig_probe_start', 'lig_probe_stop')])
 mips_duplicated <- mips_sorted[condition_duplicated,]
-save_mips(mips_duplicated, "01_mips_duplicated.txt")
+filename <- paste(input_file_name, "mips_duplicated.txt", sep="_")
+save_mips(mips_duplicated, filename)
 mips_no_dup <- mips_sorted[!condition_duplicated,]
 
 # Step 2: Exclude high copy count
 condition_too_high_copy_count <-  (mips_no_dup$ext_copy_count > 100 | mips_no_dup$lig_copy_count > 100) |
   (mips_no_dup$ext_copy_count > 5 & mips_no_dup$lig_copy_count > 5)
 mips_too_high_copy_count <- mips_no_dup[condition_too_high_copy_count,]
-save_mips(mips_too_high_copy_count, "02_mips_too_high_copy_count.txt")
+filename <- paste(input_file_name, "mips_too_high_copy_count.txt", sep="_")
+save_mips(mips_too_high_copy_count, filename)
 mips_no_high_copy <- mips_no_dup[!condition_too_high_copy_count,]
 
 # Step 3: Exclude too far intronic
 condition_too_intronic <- (mips_no_high_copy$feature_start_position) > mips_no_high_copy$mip_target_stop_position |
                           (mips_no_high_copy$feature_stop_position) < mips_no_high_copy$mip_target_start_position
 mips_too_intronic <- mips_no_high_copy[condition_too_intronic,]
-save_mips(mips_too_intronic, "03_mips_too_intronic.txt")
+filename <- paste(input_file_name, "mips_too_intronic.txt", sep="_")
+save_mips(mips_too_intronic, filename)
 mips_exonic <- mips_no_high_copy[!condition_too_intronic,] 
 
 # Merge exons that are close to each other within a chromosome
@@ -269,11 +277,13 @@ ddply(mips_exonic,                                           # Apply a function 
 # Now remove all excessive MIPs
 condition_mips_excessive <- mips_exonic$X.mip_pick_count %in% excessive_mips
 mips_excessive <- mips_exonic[condition_mips_excessive,]
-save_mips(mips_excessive, "04_mips_excessive.txt")
+filename <- paste(input_file_name, "mips_excessive.txt", sep="_")
+save_mips(mips_excessive, filename)
 mips_excessive_removed <- mips_exonic[!condition_mips_excessive,]
 
 # Save final result
-save_mips(mips_excessive_removed, "mips_final.txt")
+filename <- paste(input_file_name, "mips_final.txt", sep="_")
+save_mips(mips_excessive_removed, filename)
 
 # Report exons that are not covered
 ddply(mips_excessive_removed,
