@@ -26,7 +26,6 @@ check_probe_strands <- function(mip, mip_2, mip_3)
 
 find_missing_exon_cover <- function(exon) 
 {
-    # result <- numeric()
     start <- numeric()
     end <- numeric()
     
@@ -43,15 +42,11 @@ find_missing_exon_cover <- function(exon)
     {
         start <- c(start, exon_start)
         end <- c(end, mip_first$mip_target_start_position)
-        # result <- c(result, exon_start, mip_first$mip_target_start_position)
-        # write_missing_mips(chr, exon_start, mip_first$mip_target_start_position)
     }
     if (exon_stop > mip_last$mip_target_stop_position)
     {
         start <- c(start, exon_stop)
         end <- c(end, mip_last$mip_target_stop_position)
-        # result <- c(result, exon_stop, mip_last$mip_target_stop_position)
-        # write_missing_mips(chr, exon_stop, mip_last$mip_target_stop_position)
     }
     
     if (mips_total > 1)
@@ -65,8 +60,6 @@ find_missing_exon_cover <- function(exon)
             {
                 start <- c(start, mip$mip_target_stop_position)
                 end <- c(end, mip_2$mip_target_start_position)
-                # result <- c(result, mip$mip_target_stop_position, mip_2$mip_target_start_position)
-                # write_missing_mips(chr, mip$mip_target_stop_position, mip_2$mip_target_start_position)
             }
         }
     }
