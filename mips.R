@@ -108,6 +108,22 @@ check_exon_covered <- function(exon)
     return(TRUE)
 }
 
+eliminate_mip_based_on_rank <- function(mip_1, mip_2)
+{
+    if (mip_1$rank_score > mip_2$rank_score) 
+    {
+        return(mip_2$X.mip_pick_count)
+    }
+    else if (mip_1$rank_score > mip_2$rank_score)
+    {
+        return(mip_1$X.mip_pick_count)
+    }
+    else # Situation is ambivalent - take out the second one
+    {
+        return(mip_2$X.mip_pick_count)
+    }    
+}
+
 check_excessive_mips <- function(mip_1, mip_2, mip_3, end) 
 {
     if (mip_1$mip_target_stop_position >= mip_2$mip_target_start_position &
@@ -116,19 +132,7 @@ check_excessive_mips <- function(mip_1, mip_2, mip_3, end)
         if (mip_2$mip_target_stop_position >= end &
                 mip_3$mip_target_stop_position >= end)
         {
-            if (mip_2$rank_score > mip_3$rank_score) 
-            {
-                excessive_mip <- mip_3$X.mip_pick_count
-            }
-            else if (mip_2$rank_score > mip_3$rank_score)
-            {
-                excessive_mip <- mip_2$X.mip_pick_count
-            }
-            else # Situation is ambivalent - take out the second one
-            {
-                excessive_mip <- mip_3$X.mip_pick_count
-            }
-            # cat("Excessive mip: ", excessive_mip, "\n")
+            excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
             excessive_mips <<- c(excessive_mips, excessive_mip)
             return(TRUE)
         }
@@ -144,6 +148,20 @@ find_excessive_mips_in_exon <- function(exon)
         mips_total <- nrow(exon)
         if (mips_total >= 3)
         {
+            # Eliminate lagging excessive mips
+            if (exon[1,"mip_target_start_position"] < exon[1,"feature_start_position"] &
+                exon[2,"mip_target_start_position"] < exon[2,"feature_start_position"])
+            {
+                excessive_mips <<- c(excessive_mips, exon[1,"X.mip_pick_count"])
+            }
+            
+            # Eliminate leading excessive mips
+            if (exon[mips_total - 1, "mip_target_stop_position"] > exon[mips_total,"feature_stop_position"] &
+                exon[mips_total    , "mip_target_stop_position"] > exon[mips_total,"feature_stop_position"])
+            {
+                excessive_mips <<- c(excessive_mips, exon[mips_total,"X.mip_pick_count"])
+            }            
+            
             for(row_no in 1:(mips_total - 2))
             {
                 mip <- exon[row_no,]
@@ -269,6 +287,9 @@ ddply(mips_excessive_removed,
       c("feature_start_position", "feature_stop_position"),
       find_missing_exon_cover,
       .inform = TRUE)
+
+removed_total <- nrow(mips) - nrow(mips_excessive_removed)
+cat("Removed mips: ", removed_total, "\n")
 
 print("DONE!")
 
