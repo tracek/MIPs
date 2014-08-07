@@ -2,7 +2,7 @@ if (!require(plyr)){
     install.packages(plyr) 
 } 
 
-input_file_name <- "test_corrected.txt"
+input_file_name <- "test.txt"
 too_intronic_param <- 0
 overlap <- 200
 
@@ -219,7 +219,7 @@ excessive_mips <- numeric()
 mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALSE)
 
 # Sort by feature_start_position
-mips <- mips[order(mips$feature_start_position),]
+mips <- mips[order(mips$chr, mips$feature_start_position),]
 
 # Step 1: Remove duplicates 
 condition_duplicated <- duplicated(mips[,c('ext_probe_start','ext_probe_stop','lig_probe_start', 'lig_probe_stop')])
@@ -241,14 +241,11 @@ mips_too_intronic <- mips_no_high_copy[condition_too_intronic,]
 save_mips(mips_too_intronic, "03_mips_too_intronic.txt")
 mips_exonic <- mips_no_high_copy[!condition_too_intronic,] 
 
-<<<<<<< HEAD
 # Merge exons that are close to each other within a chromosome
 mips_exonic <- ddply(mips_exonic,
-      "chr",
-      merge_exons,
-      .inform = TRUE)
-=======
->>>>>>> c0382d4cc7d9ca20fe22a6a1717d84cb7813f2b7
+                     "chr",
+                     merge_exons,
+                     .inform = TRUE)
 
 # Remove excessive MIPs
 ddply(mips_exonic,                                           # Apply a function to mips_exonic
