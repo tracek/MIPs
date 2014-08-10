@@ -129,17 +129,17 @@ check_excessive_mips <- function(mip_1, mip_2, mip_3, end)
             {
                 excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
                 excessive_mips <<- c(excessive_mips, excessive_mip)
-                return(TRUE)
+                return(excessive_mip)
             }
             else
             {
                 excessive_mips <<- c(excessive_mips, mip_3$X.mip_pick_count)
-                return(TRUE)              
+                return(excessive_mip)              
             }
         }
     }
     
-    return(FALSE)
+    return(NULL)
 }
 
 find_excessive_mips_in_exon <- function(exon)
@@ -156,6 +156,8 @@ find_excessive_mips_in_exon <- function(exon)
                 exon[2,"mip_target_start_position"] < exon[2,"feature_start_position"])
             {
                 excessive_mips <<- c(excessive_mips, exon[1,"X.mip_pick_count"])
+                exon <- exon[!(exon$X.mip_pick_count == exon[1,"X.mip_pick_count"]),]
+                mips_total <- nrow(exon)
             }
             
             # Eliminate leading excessive mips
@@ -163,16 +165,27 @@ find_excessive_mips_in_exon <- function(exon)
                 exon[mips_total    , "mip_target_stop_position"] > exon[mips_total,"feature_stop_position"])
             {
                 excessive_mips <<- c(excessive_mips, exon[mips_total,"X.mip_pick_count"])
+                exon <- exon[!(exon$X.mip_pick_count == exon[mips_total,"X.mip_pick_count"]),]
+                mips_total <- nrow(exon)
             }            
             
             for(row_no in 1:(mips_total - 2))
             {
+                if (row_no > mips_total - 2)
+                {
+                    break
+                }
                 mip <- exon[row_no,]
                 mip_2 <- exon[row_no + 1,]
                 mip_3 <- exon[row_no + 2,]
+                
+#                 if (mip$X.mip_pick_count == 224)
+#                 {
+#                     print(mip$X.mip_pick_count)
+#                 }
+                
                 if (check_probe_strands(mip, mip_2, mip_3) == TRUE) 
                 {
-                    found <- FALSE
                     if ((row_no + 2) == mips_total)
                     {
                         found <- check_excessive_mips(mip, mip_2, mip_3, mip$feature_stop_position)
@@ -183,13 +196,19 @@ find_excessive_mips_in_exon <- function(exon)
                         found <- check_excessive_mips(mip, mip_2, mip_3, mip_4$mip_target_start_position)
                     }
                     
-                    if (found)
+                    if (length(found) > 0)
                     {
-                        if (check_exon_covered(exon) == FALSE)
-                        {
-                            stop("Something went terribly wrong - we removed a much needed MIP! We are DOOMED!")
-                        }
+                        exon <- exon[!(exon$X.mip_pick_count == found),]
+                        mips_total <- nrow(exon)
                     }
+                    
+#                     if (found)
+#                     {
+#                         if (check_exon_covered(exon) == FALSE)
+#                         {
+#                             stop("Something went terribly wrong - we removed a much needed MIP! We are DOOMED!")
+#                         }
+#                     }
                 }
             }
         }
@@ -327,10 +346,7 @@ save_mips(mips_too_intronic, filename)
 mips_exonic <- mips_no_high_copy[!condition_too_intronic,] 
 
 # Merge exons that are close to each other within a chromosome
-mips_exonic_merged <- ddply(mips_exonic,
-                     "chr",
-                     merge_exons,
-                     .inform = TRUE)
+mips_exonic_merged <- ddply(mips_exonic, "chr", merge_exons, .inform = TRUE)
 
 # Remove excessive MIPs
 ddply(mips_exonic_merged,                                    # Apply a function to mips_exonic_merged
@@ -346,20 +362,25 @@ filename <- paste(input_file_name, "mips_excessive.txt", sep="_")
 save_mips(mips_excessive, filename)
 mips_excessive_removed <- mips_exonic_merged[!condition_mips_excessive,]
 
+condition_mips_duplicated <- duplicated(mips_excessive_removed[,c('mip_target_start_position','mip_target_stop_position')])
+filename <- paste(input_file_name, "mips_duplicated.txt", sep="_")
+save_mips(mips_excessive_removed[condition_mips_duplicated,], filename)
+mips_duplicated_removed <- mips_excessive_removed[!condition_mips_duplicated,]
+
 # Save final result
 filename <- paste(input_file_name, "mips_final.txt", sep="_")
-save_mips(mips_excessive_removed, filename)
+save_mips(mips_duplicated_removed, filename)
 
 # Report exons that are not covered
-ddply(mips_excessive_removed,
+ddply(mips_duplicated_removed,
       c("feature_start_position", "feature_stop_position"),
       find_missing_exon_cover,
       .inform = TRUE)
 
-removed_total <- nrow(mips) - nrow(mips_excessive_removed)
+removed_total <- nrow(mips) - nrow(mips_duplicated_removed)
 cat("Removed mips: ", removed_total, "\n")
 
-go_to_bed(mips_excessive_removed, input_file_name)
+go_to_bed(mips_duplicated_removed, input_file_name)
 
 print("DONE!")
 
