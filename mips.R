@@ -148,20 +148,20 @@ check_excessive_mips_end <- function(mip_1, mip_2, mip_3)
         mip_1$mip_target_stop_position >= mip_3$mip_target_start_position)
     {
         exon_stop <- mip_3$feature_stop_position
-        if (mip_2$mip_target_start_position > exon_stop &
-            mip_3$mip_target_start_position > exon_stop)
+        if (mip_2$mip_target_stop_position > exon_stop &
+            mip_3$mip_target_stop_position > exon_stop)
         {
             excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
             excessive_mips <<- c(excessive_mips, excessive_mip)
             return(excessive_mip)            
         }
-        else if (mip_2$mip_target_start_position > exon_stop)
+        else if (mip_2$mip_target_stop_position > exon_stop)
         {
             excessive_mip <- mip_3$X.mip_pick_count
             excessive_mips <<- c(excessive_mips, excessive_mip)
             return(excessive_mip)                    
         }
-        else if (mip_3$mip_target_start_position > exon_stop)
+        else if (mip_3$mip_target_stop_position > exon_stop)
         {
             excessive_mip <- mip_2$X.mip_pick_count
             excessive_mips <<- c(excessive_mips, excessive_mip)
@@ -320,8 +320,8 @@ merge_exons <- function(exons)
                 
                 exons[exons$feature_start_position == new_exon_start, "feature_stop_position"] <- new_exon_stop
                 exons[exons$feature_stop_position == new_exon_stop, "feature_start_position"] <- new_exon_start
-                cat("Merge ", mip$feature_stop_position, "id:", mip$X.mip_pick_count,
-                    " and", mip_2$feature_start_position, "id:", mip_2$X.mip_pick_count, "\n")
+#                 cat("Merge ", mip$feature_stop_position, "id:", mip$X.mip_pick_count,
+#                     " and", mip_2$feature_start_position, "id:", mip_2$X.mip_pick_count, "\n")
             }
         }
     }
