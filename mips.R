@@ -320,8 +320,8 @@ merge_exons <- function(exons)
                 
                 exons[exons$feature_start_position == new_exon_start, "feature_stop_position"] <- new_exon_stop
                 exons[exons$feature_stop_position == new_exon_stop, "feature_start_position"] <- new_exon_start
-                cat("Merge ", mip$feature_stop_position, "id:", mip$X.mip_pick_count,
-                    " and", mip_2$feature_start_position, "id:", mip_2$X.mip_pick_count, "\n")
+#                 cat("Merge ", mip$feature_stop_position, "id:", mip$X.mip_pick_count,
+#                     " and", mip_2$feature_start_position, "id:", mip_2$X.mip_pick_count, "\n")
             }
         }
     }
