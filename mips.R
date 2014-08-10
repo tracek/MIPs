@@ -142,6 +142,40 @@ check_excessive_mips <- function(mip_1, mip_2, mip_3, end)
     return(NULL)
 }
 
+check_excessive_mips_end <- function(mip_1, mip_2, mip_3) 
+{
+    if (mip_1$mip_target_stop_position >= mip_2$mip_target_start_position &
+        mip_1$mip_target_stop_position >= mip_3$mip_target_start_position)
+    {
+        exon_stop <- mip_3$feature_stop_position
+        if (mip_2$mip_target_start_position > exon_stop &
+            mip_3$mip_target_start_position > exon_stop)
+        {
+            excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
+            excessive_mips <<- c(excessive_mips, excessive_mip)
+            return(excessive_mip)            
+        }
+        else if (mip_2$mip_target_start_position > exon_stop)
+        {
+            excessive_mip <- mip_3$X.mip_pick_count
+            excessive_mips <<- c(excessive_mips, excessive_mip)
+            return(excessive_mip)                    
+        }
+        else if (mip_3$mip_target_start_position > exon_stop)
+        {
+            excessive_mip <- mip_2$X.mip_pick_count
+            excessive_mips <<- c(excessive_mips, excessive_mip)
+            return(excessive_mip)                    
+        }
+        else
+        {
+            return(NULL)
+        }
+    }
+    
+    return(NULL)
+}
+
 find_excessive_mips_in_exon <- function(exon)
 {
     exon <- exon[order(exon$mip_target_start_position),]
@@ -179,16 +213,11 @@ find_excessive_mips_in_exon <- function(exon)
                 mip_2 <- exon[row_no + 1,]
                 mip_3 <- exon[row_no + 2,]
                 
-#                 if (mip$X.mip_pick_count == 224)
-#                 {
-#                     print(mip$X.mip_pick_count)
-#                 }
-                
                 if (check_probe_strands(mip, mip_2, mip_3) == TRUE) 
                 {
                     if ((row_no + 2) == mips_total)
                     {
-                        found <- check_excessive_mips(mip, mip_2, mip_3, mip$feature_stop_position)
+                        found <- check_excessive_mips_end(mip, mip_2, mip_3)
                     }
                     else
                     {
@@ -200,15 +229,11 @@ find_excessive_mips_in_exon <- function(exon)
                     {
                         exon <- exon[!(exon$X.mip_pick_count == found),]
                         mips_total <- nrow(exon)
+                        if (check_exon_covered(exon) == FALSE)
+                        {
+                            stop("Something went terribly wrong - we removed a much needed MIP! We are DOOMED!")
+                        }                        
                     }
-                    
-#                     if (found)
-#                     {
-#                         if (check_exon_covered(exon) == FALSE)
-#                         {
-#                             stop("Something went terribly wrong - we removed a much needed MIP! We are DOOMED!")
-#                         }
-#                     }
                 }
             }
         }
@@ -295,7 +320,6 @@ merge_exons <- function(exons)
                 
                 exons[exons$feature_start_position == new_exon_start, "feature_stop_position"] <- new_exon_stop
                 exons[exons$feature_stop_position == new_exon_stop, "feature_start_position"] <- new_exon_start
-                # print(exons$X.mip_pick_count)
                 cat("Merge ", mip$feature_stop_position, "id:", mip$X.mip_pick_count,
                     " and", mip_2$feature_start_position, "id:", mip_2$X.mip_pick_count, "\n")
             }
