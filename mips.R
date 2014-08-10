@@ -1,8 +1,8 @@
-if (!require(plyr)){ 
-    install.packages(plyr) 
+if (!require("plyr")){ 
+    install.packages("plyr") 
 } 
 
-input_file_name <- file.choose()
+input_file_name <- "test_corrected.txt"
 too_intronic_param <- 0
 overlap <- 200
 
@@ -18,7 +18,7 @@ check_probe_strands <- function(mip, mip_2, mip_3)
     {
         return (mip_3$probe_strand == '-')
     }
-        else
+    else
     {
         stop("Unknown probe strand")
     }
@@ -121,14 +121,21 @@ eliminate_mip_based_on_rank <- function(mip_1, mip_2)
 check_excessive_mips <- function(mip_1, mip_2, mip_3, end) 
 {
     if (mip_1$mip_target_stop_position >= mip_2$mip_target_start_position &
-            mip_1$mip_target_stop_position >= mip_3$mip_target_start_position)
+        mip_1$mip_target_stop_position >= mip_3$mip_target_start_position)
     {
-        if (mip_2$mip_target_stop_position >= end &
-                mip_3$mip_target_stop_position >= end)
+        if (mip_2$mip_target_stop_position >= end)
         {
-            excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
-            excessive_mips <<- c(excessive_mips, excessive_mip)
-            return(TRUE)
+            if (mip_3$mip_target_stop_position >= end)
+            {
+                excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
+                excessive_mips <<- c(excessive_mips, excessive_mip)
+                return(TRUE)
+            }
+            else
+            {
+                excessive_mips <<- c(excessive_mips, mip_3$X.mip_pick_count)
+                return(TRUE)              
+            }
         }
     }
     
@@ -192,6 +199,62 @@ save_mips <- function(mips, name)
     write.table(mips, file=name, sep="\t", row.names=FALSE)
 }
 
+go_to_bed <- function(exom)
+{
+    filename <- "bed.txt"
+    cat("track name=MIP_animal_candidates_new_plus itemRgb=on\n", file=filename, append=FALSE)
+    exom_plus_condition <- exom$probe_strand == "+"
+    exom_plus <- exom[exom_plus_condition, ]
+    mips_plus_total <- nrow(exom_plus)
+    
+    chr_plus <- paste("chr", exom_plus$chr, sep="")
+    ext_probe_start_minus_1 <- exom_plus$ext_probe_start - 1
+    lig_probe_stop <- exom_plus$lig_probe_stop
+    mip_pick_count_rank_score <- paste(exom_plus$X.mip_pick_count, exom_plus$rank_score, sep="_")
+    score <- rep(800, mips_plus_total)
+    probe_strand <- rep("+", mips_plus_total)
+    mip_target_start_position_minus_1 <- exom_plus$mip_target_start_position - 1
+    mip_target_stop_position <- exom_plus$mip_target_stop_position
+    RGB_plus <- rep("85,107,47", mips_plus_total)
+    
+    df_plus <- data.frame(chr_plus,
+                          ext_probe_start_minus_1, 
+                          lig_probe_stop,
+                          mip_pick_count_rank_score,
+                          score,
+                          probe_strand,
+                          mip_target_start_position_minus_1,
+                          mip_target_stop_position,
+                          RGB_plus)
+    write.table(df_plus, file=filename, append=TRUE, quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")
+    
+    cat("\ntrack name=MIP_animal_candidates_new_minus itemRgb=on\n", file=filename, append=TRUE)
+
+    exom_minus <- exom[!exom_plus_condition, ]
+    mips_minus_total <- nrow(exom_minus)
+    
+    chr_minus <- paste("chr", exom_minus$chr, sep="")
+    lig_probe_start_plus_1 <- exom_minus$lig_probe_start + 1
+    ext_probe <- exom_minus$ext_probe_stop
+    mip_pick_count_rank_score <- paste(exom_minus$X.mip_pick_count, exom_minus$rank_score, sep="_")
+    score <- rep(600, mips_minus_total)
+    probe_strand <- rep("-", mips_minus_total)
+    mip_target_start_position_minus_1 <- exom_minus$mip_target_start_position - 1
+    mip_target_stop_position <- exom_minus$mip_target_stop_position
+    RGB_minus <- rep("65,105,225", mips_minus_total)
+
+    df_minus <- data.frame(chr_minus,
+                           lig_probe_start_plus_1, 
+                           ext_probe,
+                           mip_pick_count_rank_score,
+                           score,
+                           probe_strand,
+                           mip_target_start_position_minus_1,
+                           mip_target_stop_position,
+                           RGB_minus)
+    write.table(df_minus, file=filename, append=TRUE, quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")    
+}
+
 merge_exons <- function(exons)
 {   
     mips_total <- nrow(exons)
@@ -220,7 +283,7 @@ merge_exons <- function(exons)
     
     return(exons)
 }
-
+      
 #############################################################################
 
 
@@ -262,24 +325,24 @@ save_mips(mips_too_intronic, filename)
 mips_exonic <- mips_no_high_copy[!condition_too_intronic,] 
 
 # Merge exons that are close to each other within a chromosome
-mips_exonic <- ddply(mips_exonic,
+mips_exonic_merged <- ddply(mips_exonic,
                      "chr",
                      merge_exons,
                      .inform = TRUE)
 
 # Remove excessive MIPs
-ddply(mips_exonic,                                           # Apply a function to mips_exonic
+ddply(mips_exonic_merged,                                    # Apply a function to mips_exonic_merged
       c("feature_start_position", "feature_stop_position"),  # such that 'start' and 'end' are the same
       find_excessive_mips_in_exon,                           # Name of the function
       .inform = TRUE)                                        # Detailed error reporting - off for better performance
 
 # 'find_excessive_mips_in_exon' saved results in 'excessive_mips' vector
 # Now remove all excessive MIPs
-condition_mips_excessive <- mips_exonic$X.mip_pick_count %in% excessive_mips
-mips_excessive <- mips_exonic[condition_mips_excessive,]
+condition_mips_excessive <- mips_exonic_merged$X.mip_pick_count %in% excessive_mips
+mips_excessive <- mips_exonic_merged[condition_mips_excessive,]
 filename <- paste(input_file_name, "mips_excessive.txt", sep="_")
 save_mips(mips_excessive, filename)
-mips_excessive_removed <- mips_exonic[!condition_mips_excessive,]
+mips_excessive_removed <- mips_exonic_merged[!condition_mips_excessive,]
 
 # Save final result
 filename <- paste(input_file_name, "mips_final.txt", sep="_")
@@ -293,6 +356,8 @@ ddply(mips_excessive_removed,
 
 removed_total <- nrow(mips) - nrow(mips_excessive_removed)
 cat("Removed mips: ", removed_total, "\n")
+
+go_to_bed(mips_excessive_removed)
 
 print("DONE!")
 
