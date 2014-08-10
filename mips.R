@@ -144,6 +144,8 @@ check_excessive_mips <- function(mip_1, mip_2, mip_3, end)
 
 find_excessive_mips_in_exon <- function(exon)
 {
+    exon <- exon[order(exon$mip_target_start_position),]
+
     if (check_exon_covered(exon) == TRUE) 
     {
         mips_total <- nrow(exon)
@@ -199,9 +201,9 @@ save_mips <- function(mips, name)
     write.table(mips, file=name, sep="\t", row.names=FALSE)
 }
 
-go_to_bed <- function(exom)
+go_to_bed <- function(exom, filename)
 {
-    filename <- "bed.txt"
+    filename <- paste(filename, "bed", sep=".")
     cat("track name=MIP_animal_candidates_new_plus itemRgb=on\n", file=filename, append=FALSE)
     exom_plus_condition <- exom$probe_strand == "+"
     exom_plus <- exom[exom_plus_condition, ]
@@ -357,7 +359,7 @@ ddply(mips_excessive_removed,
 removed_total <- nrow(mips) - nrow(mips_excessive_removed)
 cat("Removed mips: ", removed_total, "\n")
 
-go_to_bed(mips_excessive_removed)
+go_to_bed(mips_excessive_removed, input_file_name)
 
 print("DONE!")
 
