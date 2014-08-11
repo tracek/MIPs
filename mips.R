@@ -102,6 +102,7 @@ check_exon_covered <- function(exon)
     return(TRUE)
 }
 
+
 eliminate_mip_based_on_rank <- function(mip_1, mip_2)
 {
     if (mip_1$rank_score > mip_2$rank_score) 
@@ -115,19 +116,105 @@ eliminate_mip_based_on_rank <- function(mip_1, mip_2)
     else # Situation is ambivalent - take out the second one
     {
         return(mip_2$X.mip_pick_count)
-    }    
+    }       
 }
 
-check_excessive_mips <- function(mip_1, mip_2, mip_3, end) 
+# Assign numbers to signs to find which form majority
+transform_sign_into_number <- function(sign)
+{
+    if (sign == "+")
+    {
+        return(1)
+    }
+    else if (sign == "-")
+    {
+        return(-1)
+    }
+    else if (sign == 0)
+    {
+        return(0)
+    }
+    else
+    {
+        stop("Unknown sign!")
+    }
+}
+
+# Sum the signs
+sum_signs <- function(...) # Takes variable list of arguments
+{
+    signs <- list(...) # make a list of the input arguments
+    list_of_numbers <- lapply(signs, transform_sign_into_number) # Transform signs into numbers
+    total <- do.call(sum, list_of_numbers) # Sum the numbers
+    return(total)
+}
+
+ 
+eliminate_mip <- function(mip_1, mip_2, mip_0, mip_3)
+{
+    # Find leading and lagging probe strand
+    lagging_probe_strand <- mip_0$probe_strand
+    if (missing(mip_3)) 
+    {
+        # It's the END! of an exon.
+        leading_probe_strand <- 0
+    }
+    else
+    {
+        leading_probe_strand <- mip_3$probe_strand
+    }
+    
+    # If they have identical signs, then only rank matters
+    if (mip_1$probe_strand == mip_2$probe_strand)
+    {
+        mip_to_eliminate <- eliminate_mip_based_on_rank(mip_1, mip_2)
+        return(mip_to_eliminate)
+    }
+    else # Signs are different - try to get opposite signs overlap 
+    {
+        # The sign that forms majority is the one to eliminate
+        probe_strands_sum <- sum_signs(lagging_probe_strand, mip_2$probe_strand, mip_0$probe_strand, leading_probe_strand)
+        if (probe_strands_sum > 0) # majority is "+"
+        {
+            if (mip_1$probe_strand == "+")
+            {
+                return(mip_1$X.mip_pick_count)
+            }
+            else
+            {
+                return(mip_2$X.mip_pick_count)
+            }
+        }
+        else if (probe_strands_sum < 0) # majority is "-"
+        {
+            if (mip_1$probe_strand == "-")
+            {
+                return(mip_1$X.mip_pick_count)
+            }
+            else
+            {
+                return(mip_2$X.mip_pick_count)
+            }            
+        }
+        else # same amount of "+" and "-"
+        {
+            mip_to_eliminate <- eliminate_mip_based_on_rank(mip_1, mip_2)
+            return(mip_to_eliminate)        
+        }
+    }
+}
+
+
+check_excessive_mips <- function(mip_1, mip_2, mip_3, mip_4) 
 {
     if (mip_1$mip_target_stop_position >= mip_2$mip_target_start_position &
         mip_1$mip_target_stop_position >= mip_3$mip_target_start_position)
     {
-        if (mip_2$mip_target_stop_position >= end)
+        if (mip_2$mip_target_stop_position >= mip_4$mip_target_start_position)
         {
-            if (mip_3$mip_target_stop_position >= end)
+            if (mip_3$mip_target_stop_position >= mip_4$mip_target_start_position)
             {
-                excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
+                excessive_mip <<- eliminate_mip(mip_2, mip_3, mip_1, mip_4)
                 excessive_mips <<- c(excessive_mips, excessive_mip)
                 return(excessive_mip)
             }
@@ -151,7 +238,7 @@ check_excessive_mips_end <- function(mip_1, mip_2, mip_3)
         if (mip_2$mip_target_stop_position > exon_stop &
             mip_3$mip_target_stop_position > exon_stop)
         {
-            excessive_mip <<- eliminate_mip_based_on_rank(mip_2, mip_3)
+            excessive_mip <<- eliminate_mip(mip_2, mip_3, mip_1)
             excessive_mips <<- c(excessive_mips, excessive_mip)
             return(excessive_mip)            
         }
@@ -178,12 +265,14 @@ check_excessive_mips_end <- function(mip_1, mip_2, mip_3)
 
 find_excessive_mips_in_exon <- function(exon)
 {
+    # Sort first by mip_target_start_position
     exon <- exon[order(exon$mip_target_start_position),]
 
+    # Check if exon is covered - otherwise skip removal of excessive MIPs
     if (check_exon_covered(exon) == TRUE) 
     {
-        mips_total <- nrow(exon)
-        if (mips_total >= 3)
+        mips_total <- nrow(exon) # Number of MIPs in exon
+        if (mips_total >= 3)     # 
         {
             # Eliminate lagging excessive mips
             if (exon[1,"mip_target_start_position"] < exon[1,"feature_start_position"] &
@@ -222,7 +311,7 @@ find_excessive_mips_in_exon <- function(exon)
                     else
                     {
                         mip_4 <- exon[row_no + 3,]
-                        found <- check_excessive_mips(mip, mip_2, mip_3, mip_4$mip_target_start_position)
+                        found <- check_excessive_mips(mip, mip_2, mip_3, mip_4)
                     }
                     
                     if (length(found) > 0)
