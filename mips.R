@@ -26,6 +26,8 @@ check_probe_strands <- function(mip, mip_2, mip_3)
 
 find_missing_exon_cover <- function(exon) 
 {
+    exon <- exon[order(exon$mip_target_start_position),]
+    
     start <- numeric()
     end <- numeric()
     
@@ -38,15 +40,21 @@ find_missing_exon_cover <- function(exon)
     chr <- mip_first$chr
     
     # Check start
-    if (exon_start < mip_first$mip_target_start_position)
+    
+    starts_of_all_mips_in_exon <- exon[1:mips_total, "mip_target_start_position"]
+    ends_of_all_mips_in_exon <- exon[1:mips_total, "mip_target_stop_position"]
+    
+    if (all(exon_start < starts_of_all_mips_in_exon))
     {
         start <- c(start, exon_start)
-        end <- c(end, mip_first$mip_target_start_position)
+        end_temp <- exon_start + min(starts_of_all_mips_in_exon - exon_start)
+        end <- c(end, end_temp)
     }
-    if (exon_stop > mip_last$mip_target_stop_position)
+    if (all(exon_stop > ends_of_all_mips_in_exon))
     {
-        start <- c(start, exon_stop)
-        end <- c(end, mip_last$mip_target_stop_position)
+        end <- c(end, exon_stop)
+        start_temp <- exon_stop - min(exon_stop - ends_of_all_mips_in_exon)
+        start <- c(start, start_temp)
     }
     
     if (mips_total > 1)
@@ -54,12 +62,19 @@ find_missing_exon_cover <- function(exon)
         for(mip_no in 1:(mips_total - 1))
         {
             mip <- exon[mip_no,]
-            mip_2 <- exon[mip_no + 1,]
+
+            starts_of_all_subsequent_mips <- exon[(mip_no + 1):mips_total, "mip_target_start_position"]
             
-            if (mip$mip_target_stop_position < mip_2$mip_target_start_position)
+            if (all(mip$mip_target_stop_position < starts_of_all_subsequent_mips))
             {
+                if (mip$mip_target_stop_position == 17256698)
+                {
+                    print(mip$mip_target_stop_position)
+                }
+                
                 start <- c(start, mip$mip_target_stop_position)
-                end <- c(end, mip_2$mip_target_start_position)
+                end_temp <- mip$mip_target_stop_position + min(starts_of_all_subsequent_mips - mip$mip_target_stop_position)
+                end <- c(end, end_temp)
             }
         }
     }
@@ -75,24 +90,36 @@ find_missing_exon_cover <- function(exon)
 }
 
 check_exon_covered <- function(exon) 
-{
+{   
     mips_total <- nrow(exon)
+    
     if (mips_total > 1)
     {
-        mip_first <- exon[1,]
-        mip_last  <- exon[mips_total,]
+        exon <- exon[order(exon$mip_target_start_position),]
+        exon_start <- exon[1,]$feature_start_position
+        exon_stop <- exon[mips_total,]$feature_stop_position        
         
-        if (mip_first$mip_target_start_position > mip_first$feature_start_position |
-                mip_last$mip_target_stop_position < mip_first$feature_stop_position)
+        starts_of_all_mips_in_exon <- exon[1:mips_total, "mip_target_start_position"]
+        ends_of_all_mips_in_exon <- exon[1:mips_total, "mip_target_stop_position"]
+        
+        if (all(exon_start < starts_of_all_mips_in_exon))
         {
             return(FALSE)
         }
         
-        for(mip_no in 1:(mips_total - 1)) {
+        if (all(exon_stop > ends_of_all_mips_in_exon))
+        {
+            return(FALSE)
+        }        
+        
+        
+        for(mip_no in 1:(mips_total - 1)) 
+        {
             mip <- exon[mip_no,]
-            mip_2 <- exon[mip_no + 1,]
             
-            if (mip$mip_target_stop_position < mip_2$mip_target_start_position)
+            starts_of_all_subsequent_mips <- exon[(mip_no + 1):mips_total,"mip_target_start_position"]
+            
+            if (all(mip$mip_target_stop_position < starts_of_all_subsequent_mips))
             {
                 return(FALSE)
             }
@@ -420,8 +447,6 @@ merge_exons <- function(exons)
       
 #############################################################################
 
-
-cat("track name=MIP_candidates description=\"MIP_candidates\" visibility=1 color=0,255,0\n", file="exons_not_covered.txt")
 excessive_mips <- numeric()
 
 # Read the data
@@ -429,6 +454,9 @@ mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALS
 
 # Remove extension from inout file name
 input_file_name <- sub("^([^.]*).*", "\\1", input_file_name) 
+
+filename <- paste(input_file_name, "exons_not_covered.txt", sep="_")
+cat("track name=MIP_candidates description=\"MIP_candidates\" visibility=1 color=0,255,0\n", file=filename)
 
 # Sort the data
 mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
