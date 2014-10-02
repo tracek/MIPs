@@ -364,7 +364,7 @@ save_mips <- function(mips, name)
 go_to_bed <- function(exom, filename)
 {
     filename <- paste(filename, "bed", sep=".")
-    cat("track name=MIP_animal_candidates_new_plus itemRgb=on\n", file=filename, append=FALSE)
+    cat("track name=MIP_plus itemRgb=on\n", file=filename, append=FALSE)
     exom_plus_condition <- exom$probe_strand == "+"
     exom_plus <- exom[exom_plus_condition, ]
     mips_plus_total <- nrow(exom_plus)
@@ -390,7 +390,7 @@ go_to_bed <- function(exom, filename)
                           RGB_plus)
     write.table(df_plus, file=filename, append=TRUE, quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")
     
-    cat("\ntrack name=MIP_animal_candidates_new_minus itemRgb=on\n", file=filename, append=TRUE)
+    cat("\ntrack name=MIP_minus itemRgb=on\n", file=filename, append=TRUE)
 
     exom_minus <- exom[!exom_plus_condition, ]
     mips_minus_total <- nrow(exom_minus)
@@ -452,11 +452,11 @@ excessive_mips <- numeric()
 # Read the data
 mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALSE)
 
-# Remove extension from inout file name
+# Remove extension from input file name
 input_file_name <- sub("^([^.]*).*", "\\1", input_file_name) 
 
 filename <- paste(input_file_name, "exons_not_covered.txt", sep="_")
-cat("track name=MIP_candidates description=\"MIP_candidates\" visibility=1 color=0,255,0\n", file=filename)
+cat("track name=exons_not_covered description=\"not_covered\" visibility=1 color=0,255,0\n", file=filename)
 
 # Sort the data
 mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
@@ -470,9 +470,9 @@ filename <- paste(input_file_name, "mips_duplicated.txt", sep="_")
 save_mips(mips_duplicated, filename)
 mips_no_dup <- mips_sorted[!condition_duplicated,]
 
-# Step 2: Exclude high copy count
-condition_too_high_copy_count <-  (mips_no_dup$ext_copy_count > 100 | mips_no_dup$lig_copy_count > 100) |
-  (mips_no_dup$ext_copy_count > 5 & mips_no_dup$lig_copy_count > 5)
+# Step 2: Exclude high copy count 
+condition_too_high_copy_count <-  (mips_no_dup$ext_copy_count > 10 | mips_no_dup$lig_copy_count > 10) |
+  (mips_no_dup$ext_copy_count > 1 & mips_no_dup$lig_copy_count > 3)
 mips_too_high_copy_count <- mips_no_dup[condition_too_high_copy_count,]
 filename <- paste(input_file_name, "mips_too_high_copy_count.txt", sep="_")
 save_mips(mips_too_high_copy_count, filename)
