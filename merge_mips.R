@@ -5,7 +5,6 @@ if (!require("plyr")){
 txt_files <- list.files(pattern = "\\.txt$")
 
 input_file_name <- txt_files[1]
-rest_txt_files <- txt_files[-1]
 
 # Read the data
 mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALSE)
@@ -20,7 +19,7 @@ fileid <- unlist(strsplit(input_file_name, "_"))[1]
 mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
 col_base <- mips_sorted[0:21]
 
-for (txt_file in rest_txt_files) {
+for (txt_file in txt_files) {
   mips <- read.table(txt_file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
   mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
   input_file_name <- sub("^([^.]*).*", "\\1", txt_file)
