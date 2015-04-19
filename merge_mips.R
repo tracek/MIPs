@@ -14,7 +14,11 @@ input_file_name <- sub("^([^.]*).*", "\\1", input_file_name)
 
 # Sort the data
 mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
-col_base <- mips_sorted[0:21]
+
+to_be_copied <- c("Coverage.ext.probe", "Coverage.lig.probe", "Average.probe.coverage")
+rest <- setdiff(colnames(mips), to_be_copied)
+
+col_base <- mips_sorted[rest]
 
 for (txt_file in txt_files) {
   mips <- read.table(txt_file, sep="\t", header=TRUE, stringsAsFactors=FALSE)
@@ -22,7 +26,7 @@ for (txt_file in txt_files) {
   input_file_name <- sub("^([^.]*).*", "\\1", txt_file)
   fileid <- unlist(strsplit(txt_file, "_"))[1]
   cat("Processing", fileid, "\n")
-  col_ext <- mips_sorted[22:24]
+  col_ext <- mips_sorted[to_be_copied]
   
   ext_probe_name_id <- paste(fileid, "Coverage.ext.probe", sep="_")
   lig_probe_name_id <- paste(fileid, "Coverage.lig.probe", sep="_")
