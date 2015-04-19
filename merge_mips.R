@@ -12,9 +12,6 @@ mips <- read.table(input_file_name, sep="\t", header=TRUE, stringsAsFactors=FALS
 # Remove extension from input file name
 input_file_name <- sub("^([^.]*).*", "\\1", input_file_name) 
 
-# Get file ID
-fileid <- unlist(strsplit(input_file_name, "_"))[1]
-
 # Sort the data
 mips_sorted <- mips[order(mips$chr, mips$feature_start_position),]
 col_base <- mips_sorted[0:21]
